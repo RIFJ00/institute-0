@@ -477,7 +477,9 @@
         function handleItemClick(e) {
             const button = e.target.closest('button');
             if (!button) return;
-            e.stopPropagation();
+            // This prevents the global click listener from firing immediately
+            e.stopPropagation(); 
+            
             const docId = button.dataset.id;
             if (button.classList.contains('play-btn')) playAudio(button);
             else if (button.classList.contains('edit-btn')) showEditForm(docId);
@@ -637,9 +639,11 @@
                         }
                     }
                     if (itemsToUpload.length === 0) { throw new Error("有効で、かつ重複しないデータがありませんでした。"); }
-                    const batch = writeBatch(db);
-                    itemsToUpload.forEach(item => batch.set(doc(itemsCollectionRef), item));
-                    await batch.commit();
+                    
+                    // FIX: Changed from batch write to individual writes for better stability in some environments
+                    const promises = itemsToUpload.map(item => addDoc(itemsCollectionRef, item));
+                    await Promise.all(promises);
+
                     processedCount = itemsToUpload.length;
                     bulkUploadStatus.textContent = `${processedCount}件を登録し、${skippedCount}件をスキップしました。`;
                     bulkUploadStatus.className = "mt-4 text-sm text-green-600";
